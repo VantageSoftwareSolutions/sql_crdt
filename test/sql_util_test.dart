@@ -71,4 +71,49 @@ void main() {
           "SELECT * FROM test WHERE node_id != 'node_id' AND modified > '1970-01-01T00:00:00.000Z-0000-node_id' AND a != ?1 AND b = ?2");
     });
   });
+
+  group('Transform automatic to explicit parameters', () {
+    test('Simple automatic parameters', () {
+      final sql = 'SELECT * FROM users WHERE name = ? AND age = ?';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed, 'SELECT * FROM users WHERE name = ?1 AND age = ?2');
+    });
+
+    test('Already explicit parameters', () {
+      final sql = 'SELECT * FROM users WHERE name = ?1 AND age = ?2';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed, 'SELECT * FROM users WHERE name = ?1 AND age = ?2');
+    });
+
+    test('Mixed automatic and explicit parameters', () {
+      final sql =
+          'SELECT * FROM users WHERE name = ? AND age = ?2 AND city = ?';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed,
+          'SELECT * FROM users WHERE name = ?1 AND age = ?2 AND city = ?3');
+    });
+
+    test('Multiple automatic parameters in complex query', () {
+      final sql = '''SELECT * FROM users 
+        JOIN orders ON users.id = orders.user_id 
+        WHERE users.name = ? AND orders.status = ? AND orders.total > ?
+      ''';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed,
+          'SELECT * FROM users JOIN orders ON users.id = orders.user_id WHERE users.name = ?1 AND orders.status = ?2 AND orders.total > ?3');
+    });
+
+    test('Automatic parameters in INSERT statement', () {
+      final sql = 'INSERT INTO users (name, age, city) VALUES (?, ?, ?)';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed,
+          'INSERT INTO users (name, age, city) VALUES (?1, ?2, ?3)');
+    });
+
+    test('Automatic parameters in UPDATE statement', () {
+      final sql = 'UPDATE users SET name = ?, age = ? WHERE id = ?';
+      final transformed = SqlUtil.transformAutomaticExplicitSql(sql);
+      expect(transformed, 'UPDATE users SET name = ?1, age = ?2 WHERE id = ?3');
+    });
+  });
 }

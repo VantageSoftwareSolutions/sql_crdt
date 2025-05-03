@@ -40,7 +40,7 @@ abstract class SqlCrdt extends Crdt implements CrdtApi {
 
   @override
   Future<List<Map<String, Object?>>> query(String sql, [List<Object?>? args]) =>
-      _db.query(sql, args);
+      _db.query(SqlUtil.transformAutomaticExplicitSql(sql), args);
 
   @override
   Future<void> execute(String sql, [List<Object?>? args]) async {

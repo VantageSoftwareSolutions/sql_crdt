@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:crdt/crdt.dart';
 import 'package:source_span/source_span.dart';
 import 'package:sqlparser/sqlparser.dart';
@@ -25,6 +26,27 @@ class SqlUtil {
     if (node is TableReference) return {node.tableName};
     return node.allDescendants
         .fold({}, (prev, e) => prev..addAll(_getAffectedTables(e)));
+  }
+
+  /// function takes a SQL [statement]
+  /// transforms the SQL statement to change parameters from automatic
+  /// index into parameters with explicit index
+  static void transformAutomaticExplicit(Statement statement) {
+    statement.allDescendants
+        .whereType<NumberedVariable>()
+        .forEachIndexed((i, ref) {
+      ref.explicitIndex ??= i + 1;
+    });
+  }
+
+  static String transformAutomaticExplicitSql(String sql) {
+    final statement = _sqlEngine.parse(sql).rootNode as Statement;
+
+    // if statement is of InvalidStatement type, return the original SQL string
+    if (statement is InvalidStatement) return sql;
+
+    transformAutomaticExplicit(statement);
+    return statement.toSql();
   }
 
   static String addChangesetClauses(
