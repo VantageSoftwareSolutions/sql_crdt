@@ -1,3 +1,8 @@
+## 3.0.3
+
+- Allow anonymous query parameters (Janez Štupar)
+- Update dependencies
+
 ## 3.0.2
 
 - Update dependencies
