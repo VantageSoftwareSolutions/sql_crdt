@@ -151,6 +151,8 @@ abstract class SqlCrdt extends Crdt implements CrdtApi {
       for (final table in changeset.keys) table: await getTableKeys(table)
     };
 
+    final actuallyChangedTables = <String>{};
+
     // Merge records
     await _db.executeBatch((executor) async {
       for (final entry in changeset.entries) {
@@ -183,12 +185,28 @@ abstract class SqlCrdt extends Crdt implements CrdtApi {
               UPDATE SET $updateStatement
             WHERE excluded.hlc > $table.hlc
           ''';
-          await executor.execute(sql, record.values.toList());
+
+          // Check if this record would actually be updated
+          final existingRecord = await executor.query('SELECT hlc FROM $table WHERE ${keys.split(', ').map((k) => '$k = ?').join(' AND ')}', [
+            for (var i = 0; i < keys.split(', ').length; i++) record.values.toList()[i],
+          ]);
+
+          final shouldUpdate =
+              existingRecord.isEmpty ||
+              (record['hlc'] is String ? (record['hlc'] as String).toHlc : record['hlc'] as Hlc) >
+                  (existingRecord.first['hlc'] is String ? (existingRecord.first['hlc'] as String).toHlc : existingRecord.first['hlc'] as Hlc);
+
+          if (shouldUpdate) {
+            await executor.execute(sql, record.values.toList());
+            actuallyChangedTables.add(table);
+          }
         }
       }
     });
 
-    await onDatasetChanged(changeset.keys, hlc);
+    if (actuallyChangedTables.isNotEmpty) {
+      await onDatasetChanged(actuallyChangedTables, hlc);
+    }
   }
 
   /// Changes the node id.

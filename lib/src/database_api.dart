@@ -22,7 +22,7 @@ abstract class DatabaseApi implements ReadWriteApi {
   ///
   /// Defaults to using transactions but can be extended if a more appropriate
   /// method is available, e.g. Sqlite batches or Postgres prepared statements.
-  Future<void> executeBatch(Future<void> Function(WriteApi api) actions) =>
+  Future<void> executeBatch(Future<void> Function(ReadWriteApi api) actions) =>
       transaction(actions);
 }
 
